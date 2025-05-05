@@ -42,8 +42,9 @@ def main():
         "1. Zapisz nową konfigurację\n"
         "2. Nagraj dźwięk\n"
         "3. Odtwórz dźwięk\n"
+        "4. Oblicz SNR między najlepszym wynikiem, a każdym pozostałym\n"
         "0. Zakończ działanie")
-        wybor = input("Wybór [0-3]: ")
+        wybor = input("Wybór [0-4]: ")
         print("----------------------------------")
         if wybor == "0":
             print("Koniec działania programu")
@@ -82,8 +83,22 @@ def main():
                 selected = recordings[choice - 1]
                 odtworzDzwiek(selected["data"], selected["fs"])
 
+        elif wybor == "4":
+            if len(recordings) < 2:
+                print("Potrzeba co najmniej dwóch nagrań do porównania.")
+            else:
+                najlepszy = max(recordings, key=lambda r: (r['bity'], r['fs']))
+                print(f"Najlepszy sygnał: '{najlepszy['name']}' ({najlepszy['bity']} bit, {najlepszy['fs']} Hz)")
+
+                for rec in recordings:
+                    if rec is najlepszy:
+                        continue
+                    snr = obliczSNR(najlepszy['data'], rec['data'])
+                    print(f"SNR między '{najlepszy['name']}' a '{rec['name']}': {snr:.2f} dB")
+
         else:
             print("Nieprawidłowy wybór. Spróbuj ponownie.")
 
+        input("Naciśnij Enter aby kontynuować...")
 if __name__ == "__main__":
     main()
