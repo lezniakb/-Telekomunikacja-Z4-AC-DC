@@ -101,5 +101,7 @@ def main():
             print("Nieprawidłowy wybór. Spróbuj ponownie.")
 
         input("Naciśnij Enter aby kontynuować...")
+        print(" ")
+
 if __name__ == "__main__":
     main()
