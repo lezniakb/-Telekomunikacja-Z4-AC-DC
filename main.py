@@ -1,6 +1,7 @@
 import numpy as np
 from scipy import signal
 import os
+from scipy.io import wavfile
 
 from dzwiekObsluga import nagrajDzwiek, zapiszDzwiek, odtworzDzwiek
 from wykresyGenerator import narysujWykres
@@ -28,15 +29,51 @@ def zapiszKonfig():
     bity = int(input("Podaj liczbę bitów kwantyzacji (np. 8, 16, 24): "))
     return czasNagrania, czestotliwosc, bity
 
+def zapiszPlik(name, nagranie, fs, bity):
+    filepath = os.path.join(f"{name}.txt")
+    with open(filepath, "w") as f:
+        f.write(f"{name}\n")
+        f.write(f"{fs}\n")
+        f.write(f"{bity}\n")
+        f.write(f"{len(nagranie)}\n")
+
+def odczytajDane():
+    recordings = []
+    folder = "wyniki"
+
+    for plik in os.listdir(folder):
+        if plik.endswith(".txt"):
+            sciezka = os.path.join(folder, plik)
+            try:
+                with open(sciezka, "r") as f:
+                    lines = f.readlines()
+                    name = lines[0].strip()
+                    fs = int(lines[1])
+                    bity = int(lines[2])
+
+                wav_path = os.path.join(f"{name}")
+                if os.path.exists(wav_path):
+                    fs_read, data = wavfile.read(wav_path)
+                    recordings.append({
+                        "name": name,
+                        "data": data,
+                        "fs": fs,
+                        "bity": bity
+                    })
+                else:
+                    print(f"Brakuje pliku WAV: {wav_path}")
+            except Exception as e:
+                print(f"Nie udało się wczytać {plik}: {e}")
+    return recordings
+
 def main():
     if not os.path.exists("wyniki"):
         os.makedirs("wyniki")
 
     config = None
-    recordings = []
-    charts = []
-
     while True:
+        recordings = odczytajDane()
+        charts = []
         print("----------------------------------\n"
         "Testowanie przetworników A/C i C/A\n"
         "1. Zapisz nową konfigurację\n"
@@ -68,7 +105,7 @@ def main():
                 chart_name = f"{name}"
 
                 narysujWykres(nagranie, fs, chart_name)
-                recordings.append({"name": name, "data": nagranie, "fs": fs, "bity": bity})
+                zapiszPlik(filename, nagranie, fs, bity)
                 charts.append({"name": chart_name, "data": nagranie, "fs": fs})
                 print("Nagranie zapisane i wykres wygenerowany.")
 
@@ -78,7 +115,7 @@ def main():
             else:
                 print("Lista nagrań:")
                 for i, rec in enumerate(recordings):
-                    print(f"{i+1}. {rec['name']}")
+                    print(f"{i+1}. {rec['name'][7:]}")
                 choice = int(input("Wybierz numer nagrania do odtworzenia: "))
                 selected = recordings[choice - 1]
                 odtworzDzwiek(selected["data"], selected["fs"])
@@ -88,13 +125,13 @@ def main():
                 print("Potrzeba co najmniej dwóch nagrań do porównania.")
             else:
                 najlepszy = max(recordings, key=lambda r: (r['bity'], r['fs']))
-                print(f"Najlepszy sygnał: '{najlepszy['name']}' ({najlepszy['bity']} bit, {najlepszy['fs']} Hz)")
+                print(f"Najlepszy sygnał: '{najlepszy['name'][7:]}' ({najlepszy['bity']} bit, {najlepszy['fs']} Hz)")
 
                 for rec in recordings:
                     if rec is najlepszy:
                         continue
                     snr = obliczSNR(najlepszy['data'], rec['data'])
-                    print(f"SNR między '{najlepszy['name']}' a '{rec['name']}': {snr:.2f} dB")
+                    print(f"SNR między '{najlepszy['name'][7:]}' a '{rec['name'][7:]}': {snr:.2f} dB")
 
         else:
             print("Nieprawidłowy wybór. Spróbuj ponownie.")
